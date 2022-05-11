@@ -5,8 +5,24 @@ const app = express();
 
 app.use(express.json());
 
-// servira como um banco de dados somente para testes
+// Servira como um banco de dados somente para testes
 const customers = [];
+
+// Middleware(funcoes que sao executadas entre o recebimento da request e o retorno da response)
+// Todo middleware precisa receber esses tres parametros
+function verifyIfExistsAccountCPF(request, response, next) {
+  const { cpf } = request.headers;
+
+  const customer = customers.find(customer => customer.cpf === cpf);
+
+  if (!customer) {
+    return response.status(400).json({ error: 'Customer not found' });
+  }
+
+  request.customer = customer; // permite que o customer seja recuperado apos a execucao desse middleware
+
+  return next();
+}
 
 /**
  * cpf - string
@@ -33,14 +49,10 @@ app.post('/account', (request, response) => {
   return response.status(201).send();
 });
 
-app.get('/statement', (request, response) => {
-  const { cpf } = request.headers;
-
-  const customer = customers.find(customer => customer.cpf === cpf);
-
-  if (!customer) {
-    return response.status(400).json({ error: 'Customer not found' });
-  }
+// Duas formas diferentes de se usar middlewares
+// app.use(verifyIfExistsAccountCPF);
+app.get('/statement', verifyIfExistsAccountCPF, (request, response) => {
+  const { customer } = request;
 
   return response.json(customer.statement);
 });
